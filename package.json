@@ -1,0 +1,23 @@
+{
+  "name": "test-ruby-rails",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@hotwired/stimulus": "^3.1.0",
+    "@hotwired/turbo-rails": "^8.0.12",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vis.gl/react-google-maps": "^1.4.0",
+    "axios": "^1.7.7",
+    "esbuild": "^0.15.7",
+    "react": "^18.3.1",
+    "react-bootstrap": "^2.10.5",
+    "react-dom": "^18.3.1",
+    "sweetalert2": "^11.14.5"
+  },
+  "scripts": {
+    "build": "esbuild app/javascript/application.js --bundle --sourcemap --outdir=app/assets/builds --public-path=assets --loader:.js=jsx",
+    "build:dev": "esbuild app/javascript/application.js--bundle --sourcemap --outdir=app/assets/builds --loader:.js=jsx",
+    "build:css": "yarn run build:css:application && yarn run build:css:minify && yarn run build:css:tailwind && yarn run build:css:print-pdf && yarn run build:css:emails"
+  }
+}
