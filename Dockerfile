@@ -24,7 +24,7 @@ RUN bundle exec rails \
     rails stimulus:install 
 
 RUN yarn add nvm --latest
-RUN yarn add react react-dom esbuild typescript @hotwired/turbo-rails @types/react @types/react-dom --ignore-engines
+RUN yarn add react react-dom esbuild react-bootstrap sweetalert2 typescript @hotwired/turbo-rails @types/react @types/react-dom --ignore-engines
 RUN gem install foreman
 
 COPY package*.json yarn.lock ./
