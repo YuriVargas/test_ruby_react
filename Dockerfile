@@ -24,8 +24,9 @@ RUN bundle exec rails \
     rails stimulus:install 
 
 RUN yarn add nvm --latest
-RUN yarn add react@17.0.2 react-dom@17.0.2 esbuild typescript @hotwired/turbo-rails @types/react @types/react-dom --ignore-engines
+RUN yarn add react react-dom esbuild typescript @hotwired/turbo-rails @types/react @types/react-dom --ignore-engines
 RUN gem install foreman
+
 COPY package*.json yarn.lock ./
 COPY tsconfig.json ./
 COPY entrypoint.sh /usr/bin/
