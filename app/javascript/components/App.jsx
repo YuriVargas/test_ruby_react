@@ -1,27 +1,32 @@
 import axios from "axios";
 import React, { useEffect, useState } from "react";
-import { Button, Row, Col, Container, Form, Tab, Tabs } from "react-bootstrap";
-import { APIProvider, Map, AdvancedMarker, Pin, useMap } from '@vis.gl/react-google-maps';
+import { Button, Row, Col, Container, Form, Tab, Tabs, InputGroup } from "react-bootstrap";
+import { APIProvider, Map, AdvancedMarker, Pin, useMap, InfoWindow } from '@vis.gl/react-google-maps';
 import Swal from 'sweetalert2'
 
 function App() {
   const [location, setLocation] = useState([])
+  const [select, setSelect] = useState(0)
+  // lat: -33.4613486, lng: -70.6208912
+  const [l1, setL1] = useState(Number(-33.4613486))
+  const [l2, setL2] = useState(Number(-70.6208912))
+  const [carSearch, setCarSearch] = useState()
   const [vehiclesMap, SetVehiclesMap] = useState({
-    latitude: "0,0",
-    longitude: "0,0",
+    latitude: "0.0",
+    longitude: "0.0",
     sent_at: getFecha(),
     vehicle_identifier: ""
   });
 
+  const [car, setCar] = useState({
+    vehicle_identifier: "",
+    color: "",
+    type: ""
+  });
+
+  const { vehicle_identifier: id, color, type } = car
+  const [vehicles, setVehicles] = useState([]);
   const { vehicle_identifier, latitude, longitude } = vehiclesMap;
-
-  useEffect(() => {
-    getGps();
-  }, [])
-
-  useEffect(() => {
-
-  }, [vehiclesMap])
 
   async function postGps() {
     console.log(latitude)
@@ -33,7 +38,7 @@ function App() {
         showConfirmButton: false,
         timer: 1500
       });
-    } else if (vehicle_identifier === "" || vehicle_identifier === undefined) {
+    } else if (vehiclesMap.vehicle_identifier === "" || vehiclesMap.vehicle_identifier === undefined) {
       return Swal.fire({
         position: "top-end",
         icon: "warning",
@@ -53,14 +58,124 @@ function App() {
       const headers = {
         'Content-Type': 'application/json',
       }
-      const saveGps = await axios.post("http://localhost:3000/api/v1/gps",
-        vehiclesMap
-      ).then((response) => {
-        console.log(response)
-      })
+      try {
+
+
+        const saveGps = await axios.post("http://localhost:3000/api/v1/gps",
+          vehiclesMap
+        ).then((response) => {
+          console.log({ response })
+          if (response.status === 200 && response.data.id === 3) {
+            return Swal.fire({
+              position: "top-end",
+              icon: "warning",
+              title: "La ubicación está siendo encolada",
+              showConfirmButton: false,
+              timer: 1500
+            });
+          } else if (response.status === 201) {
+            return Swal.fire({
+              position: "top-end",
+              icon: "success",
+              title: "Ubicación ha sido guardada con éxito",
+              showConfirmButton: false,
+              timer: 1500
+            });
+          }
+
+        }).catch((err) => {
+          return Swal.fire({
+            position: "top-end",
+            icon: "warning",
+            title: "Duplicado",
+            showConfirmButton: false,
+            timer: 1500
+          });
+        })
+      } catch (error) {
+        return Swal.fire({
+          position: "top-end",
+          icon: "warning",
+          title: "Registro duplicado",
+          showConfirmButton: false,
+          timer: 1500
+        });
+      }
     }
+  }
 
+  async function postVehicle() {
 
+    if (color === undefined || color === "") {
+      return Swal.fire({
+        position: "top-end",
+        icon: "warning",
+        title: "Ingrese la color del vehiculo",
+        showConfirmButton: false,
+        timer: 1500
+      });
+    } else if (car.vehicle_identifier === "" || car.vehicle_identifier === undefined) {
+      return Swal.fire({
+        position: "top-end",
+        icon: "warning",
+        title: "Ingrese la patente del vehiculo",
+        showConfirmButton: false,
+        timer: 1500
+      });
+    } else if (type === undefined || type === "") {
+      return Swal.fire({
+        position: "top-end",
+        icon: "warning",
+        title: "Ingrese la categoría o tipo de vehículo",
+        showConfirmButton: false,
+        timer: 1500
+      });
+    } else {
+      const headers = {
+        'Content-Type': 'application/json',
+      }
+      try {
+        const saveVh = await axios.post("http://localhost:3000/api/v1/vehicle",
+          car
+        ).then((response) => {
+          console.log({ response })
+          if (response.status !== 201) {
+            return Swal.fire({
+              position: "top-end",
+              icon: "warning",
+              title: "El vehículo no se ha podido añadir",
+              showConfirmButton: false,
+              timer: 1500
+            });
+          } else {
+            return Swal.fire({
+              position: "top-end",
+              icon: "success",
+              title: "Vehículo ha sido guardada con éxito",
+              showConfirmButton: false,
+              timer: 1500
+            });
+          }
+
+        }).catch((err) => {
+          return Swal.fire({
+            position: "top-end",
+            icon: "warning",
+            title: "Registro Duplicado",
+            showConfirmButton: false,
+            timer: 1500
+          });
+        })
+      } catch (error) {
+        return Swal.fire({
+          position: "top-end",
+          icon: "warning",
+          title: "Registro duplicado",
+          showConfirmButton: false,
+          timer: 1500
+        });
+      }
+    }
   }
 
   function getGps() {
@@ -80,26 +195,51 @@ function App() {
       setLocation(points)
     })
   }
+
+  function getVehicle() {
+    axios.get("http://localhost:3000/api/v1/vehicle-list").then((response) => {
+      const VehickeList = response.data;
+      setVehicles(VehickeList);
+
+    })
+  }
+  function searchCar() {
+    axios.get("http://localhost:3000/api/v1/search-gps/" + carSearch).then((response) => {
+      const VehickeList = response.data;
+      console.log(VehickeList)
+      setL1(Number(VehickeList.latitude));
+      setL2(Number(VehickeList.longitude));
+    })
+  }
+
+  useEffect(() => {
+    getGps();
+    getVehicle();
+  }, [])
+
+  useEffect(() => { }, [vehiclesMap])
+  // useEffect(() => {}, [l1])
+  // useEffect(() => {}, [l2])
+  useEffect(() => { }, [vehicles])
+
   const [markers, setMarker] = useState([]);
 
-  const onMapClick = (e) => {
-    setMarker((current) => [
-      ...current,
-      {
-        lat: e.latLng.lat(),
-        lng: e.latLng.lng()
-      }
-    ]);
-  };
+  // const onMapClick = (e) => {
+  //   setMarker((current) => [
+  //     ...current,
+  //     {
+  //       lat: e.latLng.lat(),
+  //       lng: e.latLng.lng()
+  //     }
+  //   ]);
+  // };
 
-
-
-  const mapa = useMap("uno");
+  // const mapa = useMap("uno");
   return (
     <>
-      <div style={{ justifyContent: "center", with: "100%", display: "flex" }}>
+      <div style={{ justifyContent: "center", with: "100%", display: "flex", padding: 10, backgroundColor: "#050404" }}>
 
-        <h1 >- GPS PROJECT -</h1>
+        <h1 style={{ color: "whitesmoke" }} >- GPS PROJECT -</h1>
         <hr />
       </div>
 
@@ -109,10 +249,11 @@ function App() {
         className="mb-3"
       >
         <Tab eventKey="vehicle" title="Agregar Vehículo">
-          <Container>
-
-
-
+          <Container style={{ padding: "20px", justifyContent: "center", width: "70%" }}>
+            <Row style={{ justifyContent: "center", display: "flex" }}>
+              <h2>Vehículo</h2>
+              <hr />
+            </Row>
             <Row>
               <Form.Label htmlFor="lblPatenteID">Patente Vehiculo</Form.Label>
             </Row>
@@ -121,8 +262,8 @@ function App() {
                 placeholder="HA-111"
                 type="text"
                 id="txtVehicleIdentifierID"
-                value={vehicle_identifier}
-                onChange={(e) => { SetVehiclesMap({ ...vehiclesMap, vehicle_identifier: e.target.value }) }}
+
+                onChange={(e) => { setCar({ ...car, vehicle_identifier: e.target.value }) }}
               />
             </Row>
 
@@ -131,35 +272,59 @@ function App() {
             </Row>
             <Row>
               <Form.Control
-                placeholder="HA-111"
+                placeholder="Rojo"
                 type="text"
                 id="txtColor"
-                value={vehicle_identifier}
-                onChange={(e) => { SetVehiclesMap({ ...vehiclesMap, vehicle_identifier: e.target.value }) }}
+                value={color}
+                onChange={(e) => { setCar({ ...car, color: e.target.value }) }}
               />
+            </Row>
+            <Row>
+              <Form.Label htmlFor="lblType">Tipo</Form.Label>
+            </Row>
+            <Row>
+              <Form.Control
+                placeholder="Auto"
+                type="text"
+                id="txtTipo"
+                value={type}
+                onChange={(e) => { setCar({ ...car, type: e.target.value }) }}
+              />
+            </Row>
+            <br />
+            <Row>
+              <Button variant="primary" onClick={() => { postVehicle() }}>Guardar</Button>
             </Row>
 
           </Container>
         </Tab>
         <Tab eventKey="home" title="Agregar Coordenadas">
-          <Container>
-
+          <Container style={{ padding: "20px", justifyContent: "center", width: "70%" }}>
+            <h2>Coordenadas</h2>
+            <hr />
             <Row>
               <Form.Label htmlFor="lblPatente">Patente Vehiculo</Form.Label>
-
             </Row>
             <Row>
+              <Form.Select name="txtVehicleIdentifier" id="txtVehicleIdentifier" onChange={(e) => { SetVehiclesMap({ ...vehiclesMap, vehicle_identifier: e.target.value }) }}
+              >
+                <option value="0">Seleccione Patente</option>
+                {vehicles.map((veh) => {
+                  return (
+                    <option key={veh.id} value={veh.vehicle_identifier}>{veh.vehicle_identifier}</option>)
+                })}
+              </Form.Select>
+              {/*              
               <Form.Control
                 placeholder="HA-111"
                 type="text"
                 id="txtVehicleIdentifier"
                 value={vehicle_identifier}
                 onChange={(e) => { SetVehiclesMap({ ...vehiclesMap, vehicle_identifier: e.target.value }) }}
-              />
+              /> */}
             </Row>
             <Row>
-              <Form.Label htmlFor="lblLatitud">latitud</Form.Label>
-
+              <Form.Label htmlFor="lblLatitud">Latitud</Form.Label>
             </Row>
             <Row>
               <Form.Control
@@ -172,7 +337,7 @@ function App() {
             </Row>
             <Row>
 
-              <Form.Label htmlFor="txtLongitude">longitud</Form.Label>
+              <Form.Label htmlFor="txtLongitude">Longitud</Form.Label>
 
             </Row>
             <Row>
@@ -184,25 +349,41 @@ function App() {
                 onChange={(e) => { SetVehiclesMap({ ...vehiclesMap, longitude: e.target.value }) }}
               />
             </Row>
-            <Button variant="primary" onClick={() => { postGps(); }}>Guardar</Button>
-
+            <br />
+            <Row>
+              <Button variant="primary" onClick={() => { postGps(); }}>Guardar</Button>
+            </Row>
           </Container>
         </Tab>
         <Tab eventKey="profile" title="Ver mapa">
+
+          <InputGroup className="mb-3" style={{ width: "300px", marginLeft: "30px" }}>
+
+            <Form.Control
+              placeholder="HA-111"
+              type="text"
+              id="txtVehicleIdentifierID"
+
+              onChange={(e) => { setCarSearch(e.target.value) }}
+            />
+            <Button variant="outline-secondary" id="button-addon1" onClick={(e) => { searchCar(e) }}>
+              Buscar
+            </Button>
+          </InputGroup>
+
+
           <APIProvider apiKey={"AIzaSyDdccbpMuE9qc4c0N3hsLUqnO5A69qCtU0"}>
             <Map
               mapId="uno"
-              style={{ width: '150vh', height: '80vh', padding: "5vh", justifyContent: "center" }}
+              style={{ width: '200vh', height: '70vh', padding: "5vh", justifyContent: "center" }}
               defaultZoom={13}
-              defaultCenter={{ lat: -33.4613486, lng: -70.6208912 }}
-              onCameraChanged={(ev) =>
-                console.log('camera changed:', ev.detail.center, 'zoom:', ev.detail.zoom)
-              }
+              defaultCenter={{ lat: -33.860664, lng: 151.208138 }}
+              center={{ lat: l1, lng: l2 }}
 
-              onClick={(e) => { onMapClick(e) }}
+            >
+              <PoiMarkers pois={location} />
 
 
-            > <PoiMarkers pois={location} />
             </Map>
           </APIProvider>
 
@@ -213,29 +394,63 @@ function App() {
 }
 
 const PoiMarkers = (props) => {
-
+  const [selectedCenter, setSelectedCenter] = useState(null);
   const handleClick = React.useCallback((ev) => {
+    console.log(ev)
     if (!map) return;
     if (!ev.latLng) return;
     console.log('Marca clicked:', ev.latLng.toString());
     map.panTo(ev.latLng);
   });
-
+  useEffect(() => {
+    const listener = e => {
+      if (e.key === "Escape") {
+        setSelectedCenter(null);
+      }
+    };
+    window.addEventListener("keydown", listener);
+    return () => {
+      window.removeEventListener("keydown", listener);
+    };
+  },
+  []);
+  
   return (
     <>
+      {selectedCenter && (
+        <InfoWindow
+          onCloseClick={() => {
+            setSelectedCenter(null);
+          }}
+          position={{
+            lat: selectedCenter.latitude,
+            lng: selectedCenter.longitude
+          }}
+        >
+        </InfoWindow>
+      )}
       {props.pois.map((poi) => (
+
         <AdvancedMarker
+
           key={poi.key}
+          title={poi.key}
           position={poi.location}>
           clickable={true}
-          onClick={handleClick}
+          onClick={() => {
+            setSelectedCenter(center);
+          }}
           <Pin background={'#FBBC04'} glyphColor={'#000'} borderColor={'#000'} />
         </AdvancedMarker>
+
       ))}
+
     </>
   );
 };
+
 export default App;
+
 
 export const getFecha = () => {
   const date = new Date();

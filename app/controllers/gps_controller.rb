@@ -6,6 +6,18 @@ class GpsController < ApplicationController
     end
     
     def create
+      render json: { message:"El punto de ubicación será registrado en segundo plano.",id: 3}
+        WayPointsJob.perform_later(gps_params)
+        
+        # @gps = Gps.new(gps_params)
+        # if @gps.save
+        #   render json: {message: 'El registro ha sido creado', id: @gps.id,}, status: :created
+        # else
+        #   render json: {message:@gps.errors, id:2}, status: :unprocessable_entity
+        # end
+    end
+    
+    def createNotAsync  
         @gps = Gps.new(gps_params)
         if @gps.save
           render json: {message: 'El registro ha sido creado', id: @gps.id,}, status: :created
@@ -15,7 +27,12 @@ class GpsController < ApplicationController
     end
 
     def list
-        render json: Gps.all
+      consulta = Gps.select(:vehicle_identifier, 'MAX(sent_at) AS date').group(:vehicle_identifier)
+      render json: Gps.all.joins("RIGHT JOIN (#{consulta.to_sql}) sub ON sub.date=gps.sent_at AND sub.vehicle_identifier = gps.vehicle_identifier" )
+    end
+
+    def search
+      render json: Gps.select("vehicle_identifier, latitude, longitude, sent_at").where("vehicle_identifier": params[:vehicle_identifier]).order('sent_at desc').first
     end
 
     private
@@ -24,7 +41,4 @@ class GpsController < ApplicationController
       params.require(:gp).permit(:latitude, :longitude, :sent_at, :vehicle_identifier )    
     end
 
-    def findGps
-      
-    end
 end
